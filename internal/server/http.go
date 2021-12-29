@@ -65,5 +65,27 @@ func (s *httpServer) handleProduce(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *httpServer) handleConsume(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var req ConsumeRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rec, err := s.Log.Read(req.Offset)
+	if err == ErrorOffsetNotFound {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	res := ConsumeResponce{Record: rec}
+	err = json.NewEncoder(w).Encode(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
